@@ -1,0 +1,12 @@
+[package]
+name = "ffi-logger"
+version = "0.1.0"
+edition = "2021"
+license = "MPL 2.0"
+authors = ["Ross Smyth <18294397+RossSmyth@users.noreply.github.com>"]
+description = "Logging object for integrating Rust libraries with FFI binaries"
+keywords = ["logging", "ffi"]
+
+[dev-dependencies]
+log = "0.4.22"
+env_logger = "0.11"
