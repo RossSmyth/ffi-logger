@@ -23,7 +23,7 @@ impl FfiLogger {
     /// [Send], or the logger function must take a lock of some sort.
     ///
     /// The data also must be held exclusively by the [FfiLogger] struct until the logger is deinitialized.
-    /// 
+    ///
     /// The data must also be flushed on ever call to the logger function.
     pub unsafe fn new(
         logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize,
