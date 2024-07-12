@@ -57,6 +57,24 @@ pub extern "C" fn inc_deinit(state: Box<inc_State>) {
 ```
 
 Then on the C side
+
+```c
+// libinc.h
+#include <unistd.h>
+
+typedef struct inc_State inc_State;
+
+inc_State* inc_init(
+    ssize_t(*logger)(void*, const char*),
+    void* data
+);
+
+void inc_increment(inc_State*);
+
+void inc_deinit(inc_State*);
+
+```
+
 ```c
 #include <stdint.h>
 #include <stdio.h>
