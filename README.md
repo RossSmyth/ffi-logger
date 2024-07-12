@@ -6,13 +6,13 @@ This library is meant to be used in Rust libraries to expose the Rust logging in
 Some library that is exposing some API to a C application.
 
 ```rust
+use std::ffi::c_char;
 use std::ffi::c_void;
 use std::ptr::NonNull;
-use std::ffi::c_char;
 
-use log::{info, LevelFilter};
 use env_logger::Target;
 use ffi_logger::FfiLogger;
+use log::{info, LevelFilter};
 
 /// Library state for incrementing a counter.
 pub struct inc_State {
@@ -20,25 +20,21 @@ pub struct inc_State {
 }
 
 /// Library init function
-/// 
+///
 /// # Safety
 /// The data & function pair provided must be thread-safe.
-/// 
+///
 /// The logger function must flush the logging data on each call.
-/// 
+///
 /// The data must live until the [inc_deinit] funtion is called.
 #[no_mangle]
 pub unsafe extern "C" fn inc_init(
-    start: u32, 
-    logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize, 
-    data: Option<NonNull<c_void>>
+    start: u32,
+    logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize,
+    data: Option<NonNull<c_void>>,
 ) -> Box<inc_State> {
-    env_logger::builder().target(Target::Pipe(Box::new(FfiLogger::new(
-            logger, data
-        ))));
-    Box::new(inc_State {
-        state: start
-    })
+    env_logger::builder().target(Target::Pipe(Box::new(FfiLogger::new(logger, data))));
+    Box::new(inc_State { state: start })
 }
 
 /// Increments the library state
@@ -103,6 +99,7 @@ int main() {
 
     inc_State* library_state = inc_init(0, write_log, log_file);
 
+    // The FFI side can still use the logger as well.
     if (fputs("Start of increment\n", log_file) < 0) {
         clearerr(log_file);
     }
