@@ -1,16 +1,28 @@
 #![doc = include_str!("../README.md")]
 
 use std::ffi::{c_char, c_void, CString};
-use std::io::Write;
-use std::ptr::NonNull;
+use std::ptr::{self, NonNull};
+use std::sync::atomic::{AtomicPtr, Ordering};
 
+use log::{log_enabled, Log};
+
+type Callback = extern "C" fn(Option<NonNull<c_void>>, log::Level, *const c_char);
+
+#[cfg(not(target_family = "wasm"))]
 #[derive(Debug)]
 pub struct FfiLogger {
     data: Option<NonNull<c_void>>,
-    logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize,
+    logger: AtomicPtr<()>,
 }
 
+// Safety: 
+// It's just pointers. The user data needs to be thread safe.
 unsafe impl Send for FfiLogger {}
+
+// Safety:
+// I swear to never ever mutate the data field.
+// after construction. The logger field can be changed one time.
+unsafe impl Sync for FfiLogger {}
 
 impl FfiLogger {
     /// Create an instance of an FFI logger.
@@ -27,46 +39,68 @@ impl FfiLogger {
     ///
     /// Each call to the logger should flush the output so that each logged message is not
     /// interleaved.
-    /// 
+    ///
     /// Once the Rust library is done, disable the logger with [log::set_max_level] to [log::LevelFilter::Off].
-    /// Then it is safe to do any deallocation on the FFI side.
-    /// 
+    /// Then the FFI side can deallocate or deinit whatever it needs.
+    ///
     /// # Safety
     /// * The callback & data must be safe to be used across different threads.
     /// * Once [log::set_max_level] is set to [log::LevelFilter::Off], Rust code must not be called into again.
     pub unsafe fn new(
-        logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize,
+        logger: Callback,
         data: Option<NonNull<c_void>>,
     ) -> FfiLogger {
-        Self { logger, data }
-    }
-
-    pub fn into_data(self) -> Option<NonNull<c_void>> {
-        let Self { data, .. } = self;
-
-        data
+        Self { logger: AtomicPtr::new(logger as _), data }
     }
 }
 
-impl Write for FfiLogger {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let c_str = CString::new(buf)?;
+impl Log for FfiLogger {
+    fn enabled(&self, _: &log::Metadata) -> bool {
+        true
+    }
 
-        let written = (self.logger)(self.data, c_str.as_ptr());
+    fn log(&self, record: &log::Record) {
+        let log_fn = self.logger.load(Ordering::Relaxed);
+        if log_fn.is_null() { return; }
 
-        match written.try_into() {
-            // If it suceeds, that means some non-negative value was returned.
-            Ok(written) => Ok(written),
+        // Safety:
+        // Function pointers have the same representation as data pointers
+        // and we cfg'd out wasm.
+        let log_fn: Callback = unsafe {std::mem::transmute(log_fn) };
+        
+        if log_enabled!(record.level()) {
+            let message = match CString::new(record.args().to_string()) {
+                Ok(cstr) => cstr,
+                Err(err) => CString::new(
+                    err.into_vec()
+                        .into_iter()
+                        .map(|char| if char == 0 { 0x1A } else { char })
+                        .collect::<Vec<_>>(),
+                )
+                .unwrap(),
+            };
 
-            // If it fails, then it is negative so provide the error code.
-            Err(_) => Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("FFI logging error: {written}"),
-            )),
+            (log_fn)(self.data, record.level(), message.as_ptr());
         }
     }
 
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
+    fn flush(&self) {}
+}
+
+pub struct LogHandle {
+    logger: &'static FfiLogger,
+}
+
+impl LogHandle {
+    pub fn new(logger: &'static FfiLogger) -> Self {
+        Self {
+            logger
+        }
+    }
+
+    pub fn deinit(&self) -> Option<NonNull<c_void>> {
+        self.logger.logger.store(ptr::null_mut(), Ordering::Relaxed);
+
+        self.logger.data
     }
 }
