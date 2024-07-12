@@ -18,16 +18,16 @@ impl FfiLogger {
     /// This function is meant to be exposed by the FFI library in its own cohesive API. How that
     /// is is up to the library itself.
     ///
-    /// The callback takes in an optional type-erased user data pointer, and a null-terminated 
-    /// string to be logged. The return value of the callback represents the number of bytes 
+    /// The callback takes in an optional type-erased user data pointer, and a null-terminated
+    /// string to be logged. The return value of the callback represents the number of bytes
     /// written if zero or larger, and if negative represents a user defined error code.
-    /// 
+    ///
     /// The callback may be called from different threads, meaning that it may be used
-    /// in parallel to the C FFI. 
-    /// 
-    /// Each call to the logger should flush the output so that each logged message is not 
+    /// in parallel to the C FFI.
+    ///
+    /// Each call to the logger should flush the output so that each logged message is not
     /// interleaved.
-    /// 
+    ///
     /// # Safety
     /// * The callback & data must be safe to be used across different threads.
     pub unsafe fn new(
