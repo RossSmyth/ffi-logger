@@ -27,9 +27,13 @@ impl FfiLogger {
     ///
     /// Each call to the logger should flush the output so that each logged message is not
     /// interleaved.
-    ///
+    /// 
+    /// Once the Rust library is done, disable the logger with [log::set_max_level] to [log::LevelFilter::Off].
+    /// Then it is safe to do any deallocation on the FFI side.
+    /// 
     /// # Safety
     /// * The callback & data must be safe to be used across different threads.
+    /// * Once [log::set_max_level] is set to [log::LevelFilter::Off], Rust code must not be called into again.
     pub unsafe fn new(
         logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize,
         data: Option<NonNull<c_void>>,
