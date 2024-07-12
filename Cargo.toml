@@ -7,6 +7,8 @@ authors = ["Ross Smyth <18294397+RossSmyth@users.noreply.github.com>"]
 description = "Logging object for integrating Rust libraries with FFI binaries"
 keywords = ["logging", "ffi"]
 
+[dependencies]
+log = "0.4.22"
+
 [dev-dependencies]
 log = "0.4.22"
-env_logger = "0.11"
