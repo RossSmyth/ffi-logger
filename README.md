@@ -71,6 +71,7 @@ ptrdiff_t write_log(FILE* log_file, char* to_write) {
     size_t written = fwrite(to_write, 1, strlen(to_write), log_file);
     int err = fflush(log_file);
     if (err != 0) {
+        clearerr(log_file);
         return -1 * errno;
     } else {
         return written;
@@ -83,11 +84,15 @@ int main() {
 
     inc_State* library_state = inc_init(0, write_log, log_file);
 
+    if (fputs("Start of increment\n", log_file) < 0) {
+        clearerr(log_file);
+    }
     inc_increment(library_state);
     inc_increment(library_state);
     inc_increment(library_state);
-
-    inc_deinit(library_state);
+    if (fputs("Time to deinit\n", log_file) < 0) {
+        clearerr(log_file);
+    }
 
     inc_deinit(library_state);
 

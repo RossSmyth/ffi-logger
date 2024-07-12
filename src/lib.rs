@@ -18,13 +18,18 @@ impl FfiLogger {
     /// This function is meant to be exposed by the FFI library in its own cohesive API. How that
     /// is is up to the library itself.
     ///
+    /// The callback takes in an optional type-erased user data pointer, and a null-terminated 
+    /// string to be logged. The return value of the callback represents the number of bytes 
+    /// written if zero or larger, and if negative represents a user defined error code.
+    /// 
+    /// The callback may be called from different threads, meaning that it may be used
+    /// in parallel to the C FFI. 
+    /// 
+    /// Each call to the logger should flush the output so that each logged message is not 
+    /// interleaved.
+    /// 
     /// # Safety
-    /// The data must be able to be sent between threads. That means that it must either be
-    /// [Send], or the logger function must take a lock of some sort.
-    ///
-    /// The data also must be held exclusively by the [FfiLogger] struct until the logger is deinitialized.
-    ///
-    /// The data must also be flushed on ever call to the logger function.
+    /// * The callback & data must be safe to be used across different threads.
     pub unsafe fn new(
         logger: extern "C" fn(Option<NonNull<c_void>>, *const c_char) -> isize,
         data: Option<NonNull<c_void>>,
