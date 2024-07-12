@@ -92,7 +92,13 @@ pub struct LogHandle {
 }
 
 impl LogHandle {
-    fn deinit(&self) -> Option<NonNull<c_void>> {
+    pub fn new(logger: &'static FfiLogger) -> Self {
+        Self {
+            logger
+        }
+    }
+
+    pub fn deinit(&self) -> Option<NonNull<c_void>> {
         self.logger.logger.store(ptr::null_mut(), Ordering::Relaxed);
 
         self.logger.data
