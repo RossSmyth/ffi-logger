@@ -48,7 +48,7 @@ jobs:
       run: cargo build --verbose
     
     - name: Test library
-      run: cargo test --verbose --no-fail-fast
+      run: cargo test --verbose --no-fail-fast --doc
     
     - name: Clippy
       run: cargo clippy --all-targets
