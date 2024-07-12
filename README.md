@@ -79,11 +79,12 @@ void inc_deinit(inc_State*);
 #include <stdint.h>
 #include <stdio.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "libinc.h"
 
 // Callback for logging
-ptrdiff_t write_log(FILE* log_file, char* to_write) {
+ssize_t write_log(FILE* log_file, char* to_write) {
     errno = 0;
 
     size_t written = fwrite(to_write, 1, strlen(to_write), log_file);
